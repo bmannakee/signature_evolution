@@ -1,5 +1,6 @@
 library(tidyverse)
-
+library(BSgenome.Hsapiens.1000genomes.hs37d5)
+library(SomaticSignatures)
 
 file1 <- "data/PD11461_dirichlet_subs_plus_timing_v0.1.txt"
 file2 <- "data/PD8948_dirichlet_subs_plus_timing_v0.1.txt"
@@ -128,5 +129,46 @@ col_spec <- cols(
   timing = col_character()
 )
 fr1 <- read_tsv(file1, col_types = col_spec)
+fr1_primary <- fr1 %>% dplyr::select(ID,Chrom,Pos,Ref,Alt,ends_with("PD11461c")) %>%
+  dplyr::mutate(freq = dis_MtAllPct_PD11461c/100.)
+
+# Generate VRanges object for SomaticSignatures
+reference <- BSgenome.Hsapiens.1000genomes.hs37d5
+vr <- VariantAnnotation::VRanges(seqnames = fr1_primary$Chrom,
+                                 ranges = IRanges(start = fr1_primary$Pos, width = rep(1,nrow(fr1_primary))),
+                                 ref = fr1_primary$Ref,
+                                 alt = fr1_primary$Alt,
+                                 freq = fr1_primary$freq)
+#VariantAnnotation::refDepth(vr) <- fr$t_ref_count
+#VariantAnnotation::altDepth(vr) <- fr$t_alt_count
+GenomeInfoDb::seqlevels(vr) <- GenomicAlignments::seqlevelsInUse(vr)
+GenomeInfoDb::genome(vr) <- GenomeInfoDb::genome(reference)[1:length(GenomeInfoDb::genome(vr))]
+vr <- SomaticSignatures::mutationContext(vr,reference)
+vars <- tibble::as_tibble(vr)
+vars <- vars %>%  dplyr::select(seqnames, start, end, freq, alteration, context)
+vars$trinucleotide_context <- paste0(vars$alteration,"_",vars$context)
+vars
+vars %>% readr::write_tsv("./PD11461_primary.tsv")
+
+
 # Note that the "b" sample here is the normal, "a" is the local relapse, and "c" is the primary
-fr1_primary <- fr1 %>% dplyr::select(ID,Chrom,Pos,Ref,Alt,ends_with("PD11461c"))
+fr1_relapse <- fr1 %>% dplyr::select(ID,Chrom,Pos,Ref,Alt,ends_with("PD11461a")) %>%
+  dplyr::mutate(freq = dis_MtAllPct_PD11461a/100.)
+
+# Generate VRanges object for SomaticSignatures
+reference <- BSgenome.Hsapiens.1000genomes.hs37d5
+vr <- VariantAnnotation::VRanges(seqnames = fr1_relapse$Chrom,
+                                 ranges = IRanges(start = fr1_relapse$Pos, width = rep(1,nrow(fr1_relapse))),
+                                 ref = fr1_relapse$Ref,
+                                 alt = fr1_relapse$Alt,
+                                 freq = fr1_relapse$freq)
+#VariantAnnotation::refDepth(vr) <- fr$t_ref_count
+#VariantAnnotation::altDepth(vr) <- fr$t_alt_count
+GenomeInfoDb::seqlevels(vr) <- GenomicAlignments::seqlevelsInUse(vr)
+GenomeInfoDb::genome(vr) <- GenomeInfoDb::genome(reference)[1:length(GenomeInfoDb::genome(vr))]
+vr <- SomaticSignatures::mutationContext(vr,reference)
+vars <- tibble::as_tibble(vr)
+vars <- vars %>%  dplyr::select(seqnames, start, end, freq, alteration, context)
+vars$trinucleotide_context <- paste0(vars$alteration,"_",vars$context)
+vars
+vars %>% readr::write_tsv("./PD11461_relapse.tsv")
