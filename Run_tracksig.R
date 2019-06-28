@@ -21,11 +21,11 @@ get_local_signature_fr <- function(sig_file){
 
 
 
-test_file <- fs::fs_path('~/Desktop/projects/signature_evolution/PD11461_primary.bed')
+test_file <- fs::fs_path('~/Desktop/projects/signature_evolution/PD8948c_primary1.bed')
 sig_file <- fs::fs_path("./signatures.txt")
 sig_fr <- get_local_signature_fr(sig_file) 
 this_sig_fr <- sig_fr %>% dplyr::select(-trinucleotide_context)
-fr <- run_tracksig(test_file,BSgenome.Hsapiens.1000genomes.hs37d5,bin_size=200,file_type="bed")
+fr <- run_tracksig(test_file,BSgenome.Hsapiens.1000genomes.hs37d5,bin_size=100,file_type="bed")
 
 tracksig_matrix <- as.matrix(fr %>% dplyr::select(-time))
 sig_matrix <- t(as.matrix(sig_fr %>% dplyr::select(colnames(fr %>% dplyr::select(-time)))))
@@ -33,4 +33,4 @@ final_signatures <- tracksig_matrix %*% sig_matrix
 colnames(final_signatures) <- sig_fr$trinucleotide_context
 final_signatures_fr <- as_tibble(final_signatures)
 final_fr <- fr %>% bind_cols(final_signatures_fr)
-final_fr %>% readr::write_tsv('./data/pd11461_primary_tracksig_binsize200.tsv')
+final_fr %>% readr::write_tsv('./data/pd8948c_primary1_tracksig_binsize100.tsv')
